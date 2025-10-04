@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binni the Library - Smart Library Management System</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Landing Page -->
+    <div id="landing-page" class="page">
+        <header class="landing-header">
+            <div class="container">
+                <div class="header-content">
+                    <h1 class="library-title">
+                        <i class="fas fa-brain"></i>
+                        Binni the Library
+                    </h1>
+                    <p class="library-subtitle">AI-Powered Smart Library Management System</p>
+                </div>
+            </div>
+        </header>
+        
+        <main class="landing-main">
+            <div class="container">
+                <div class="role-selection">
+                    <h2>Select Your Role</h2>
+                    <div class="role-cards">
+                        <div class="role-card" data-role="student">
+                            <div class="role-icon">
+                                <i class="fas fa-user-graduate"></i>
+                            </div>
+                            <h3>Student</h3>
+                            <p>Browse books, download PDFs, request offline issues</p>
+                            <button class="btn btn--primary">Login as Student</button>
+                        </div>
+                        
+                        <div class="role-card" data-role="faculty">
+                            <div class="role-icon">
+                                <i class="fas fa-chalkboard-teacher"></i>
+                            </div>
+                            <h3>Faculty</h3>
+                            <p>Upload PDFs, access digital repository, manage resources</p>
+                            <button class="btn btn--primary">Login as Faculty</button>
+                        </div>
+                        
+                        <div class="role-card" data-role="librarian">
+                            <div class="role-icon">
+                                <i class="fas fa-user-shield"></i>
+                            </div>
+                            <h3>Librarian</h3>
+                            <p>Manage catalog, approve requests, track fines, analytics</p>
+                            <button class="btn btn--primary">Login as Librarian</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Login Modal -->
+    <div id="login-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="login-title">Login</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="login-form">
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" id="login-email" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" class="form-control" id="login-password" required>
+                    </div>
+                    <button type="submit" class="btn btn--primary btn--full-width">Login</button>
+                </form>
+                <div id="login-error" class="error-message hidden"></div>
+                
+                <!-- Demo Credentials Helper -->
+                <div style="margin-top: 16px; padding: 12px; background: var(--color-bg-1); border-radius: var(--radius-base); font-size: 12px;">
+                    <strong>Demo Credentials:</strong><br>
+                    Student: john.student@iem.edu / student123<br>
+                    Faculty: sarah.faculty@iem.edu / faculty123<br>
+                    Librarian: mike.librarian@iem.edu / librarian123
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard Pages -->
+    <div id="dashboard-page" class="page hidden">
+        <!-- Navigation -->
+        <nav class="dashboard-nav">
+            <div class="nav-brand">
+                <i class="fas fa-brain"></i>
+                Binni the Library
+            </div>
+            <div class="nav-links">
+                <button class="nav-link active" data-section="home">
+                    <i class="fas fa-home"></i> Dashboard
+                </button>
+                <button class="nav-link" data-section="books">
+                    <i class="fas fa-book"></i> Books
+                </button>
+                <button class="nav-link" data-section="my-books" id="my-books-nav">
+                    <i class="fas fa-bookmark"></i> My Books
+                </button>
+                <button class="nav-link" data-section="upload" id="upload-nav">
+                    <i class="fas fa-upload"></i> Upload
+                </button>
+                <button class="nav-link" data-section="admin" id="admin-nav">
+                    <i class="fas fa-cog"></i> Admin
+                </button>
+            </div>
+            <div class="nav-user">
+                <span id="user-name">User</span>
+                <button class="btn btn--secondary btn--sm" id="logout-btn">Logout</button>
+            </div>
+        </nav>
+
+        <!-- Dashboard Content -->
+        <main class="dashboard-content">
+            <!-- Home Section -->
+            <section id="home-section" class="dashboard-section active">
+                <div class="container">
+                    <div class="dashboard-header">
+                        <h1>Welcome to Your Dashboard</h1>
+                        <p id="dashboard-subtitle">Manage your library resources efficiently</p>
+                    </div>
+                    
+                    <div class="dashboard-stats">
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-book"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="total-books">0</h3>
+                                <p>Total Books</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-download"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="digital-books">0</h3>
+                                <p>Digital Books</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-bookmark"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="issued-books">0</h3>
+                                <p>Books Issued</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="pending-requests">0</h3>
+                                <p>Pending Requests</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-grid">
+                        <div class="dashboard-widget">
+                            <h3>Recent Books</h3>
+                            <div id="recent-books" class="book-list"></div>
+                        </div>
+                        
+                        <div class="dashboard-widget">
+                            <h3>AI Recommendations</h3>
+                            <div id="recommendations" class="book-list"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Books Section -->
+            <section id="books-section" class="dashboard-section">
+                <div class="container">
+                    <div class="section-header">
+                        <h2>Library Catalog</h2>
+                        <div class="search-controls">
+                            <div class="search-bar">
+                                <input type="text" id="book-search" class="form-control" placeholder="Search books by title, author, ISBN...">
+                                <button class="btn btn--primary" id="search-btn">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                            <select id="genre-filter" class="form-control">
+                                <option value="">All Genres</option>
+                                <option value="Computer Science">Computer Science</option>
+                                <option value="Literature">Literature</option>
+                                <option value="Mathematics">Mathematics</option>
+                                <option value="Economics">Economics</option>
+                                <option value="Chemistry">Chemistry</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="books-grid" class="books-grid"></div>
+                </div>
+            </section>
+
+            <!-- My Books Section -->
+            <section id="my-books-section" class="dashboard-section">
+                <div class="container">
+                    <h2>My Books</h2>
+                    <div id="my-books-content">
+                        <div class="my-books-tabs">
+                            <button class="tab-btn active" data-tab="issued">Issued Books</button>
+                            <button class="tab-btn" data-tab="history">Reading History</button>
+                            <button class="tab-btn" data-tab="requests">My Requests</button>
+                        </div>
+                        
+                        <div id="issued-tab" class="tab-content active">
+                            <div id="issued-books-list" class="books-list"></div>
+                        </div>
+                        
+                        <div id="history-tab" class="tab-content">
+                            <div id="reading-history-list" class="books-list"></div>
+                        </div>
+                        
+                        <div id="requests-tab" class="tab-content">
+                            <div id="my-requests-list" class="requests-list"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Upload Section -->
+            <section id="upload-section" class="dashboard-section">
+                <div class="container">
+                    <h2>Upload New Book</h2>
+                    <div class="upload-form-container">
+                        <form id="upload-form" class="upload-form">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Title</label>
+                                    <input type="text" class="form-control" id="book-title" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Author</label>
+                                    <input type="text" class="form-control" id="book-author" required>
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">ISBN</label>
+                                    <input type="text" class="form-control" id="book-isbn" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Genre</label>
+                                    <select class="form-control" id="book-genre" required>
+                                        <option value="">Select Genre</option>
+                                        <option value="Computer Science">Computer Science</option>
+                                        <option value="Literature">Literature</option>
+                                        <option value="Mathematics">Mathematics</option>
+                                        <option value="Economics">Economics</option>
+                                        <option value="Chemistry">Chemistry</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Publication Year</label>
+                                    <input type="number" class="form-control" id="book-year" min="1900" max="2025" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Copies</label>
+                                    <input type="number" class="form-control" id="book-copies" min="0" required>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Description</label>
+                                <textarea class="form-control" id="book-description" rows="3" required></textarea>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">PDF File</label>
+                                <input type="file" class="form-control" id="book-pdf" accept=".pdf">
+                            </div>
+                            
+                            <button type="submit" class="btn btn--primary btn--full-width">Upload Book</button>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Admin Section -->
+            <section id="admin-section" class="dashboard-section">
+                <div class="container">
+                    <h2>Admin Panel</h2>
+                    <div class="admin-tabs">
+                        <button class="admin-tab-btn active" data-tab="requests">Pending Requests</button>
+                        <button class="admin-tab-btn" data-tab="overdue">Overdue Books</button>
+                        <button class="admin-tab-btn" data-tab="analytics">Analytics</button>
+                        <button class="admin-tab-btn" data-tab="users">User Management</button>
+                    </div>
+                    
+                    <div id="admin-requests" class="admin-tab-content active">
+                        <h3>Pending Issue Requests</h3>
+                        <div id="pending-requests-list" class="requests-list"></div>
+                    </div>
+                    
+                    <div id="admin-overdue" class="admin-tab-content">
+                        <h3>Overdue Books</h3>
+                        <div id="overdue-books-list" class="overdue-list"></div>
+                    </div>
+                    
+                    <div id="admin-analytics" class="admin-tab-content">
+                        <h3>Library Analytics</h3>
+                        <div class="analytics-grid">
+                            <div class="analytics-card">
+                                <h4>Popular Genres</h4>
+                                <div id="genre-chart" class="chart-container" style="position: relative; height: 300px;">
+                                    <canvas></canvas>
+                                </div>
+                            </div>
+                            <div class="analytics-card">
+                                <h4>Monthly Issues</h4>
+                                <div id="monthly-chart" class="chart-container" style="position: relative; height: 300px;">
+                                    <canvas></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="admin-users" class="admin-tab-content">
+                        <h3>User Management</h3>
+                        <div id="users-list" class="users-list"></div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- PDF Viewer Modal -->
+    <div id="pdf-modal" class="modal hidden">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3 id="pdf-title">PDF Viewer</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="pdf-viewer">
+                    <p>PDF content would be displayed here. This is a demo version.</p>
+                    <div class="pdf-placeholder">
+                        <i class="fas fa-file-pdf"></i>
+                        <p>PDF Viewer - Demo Mode</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Chatbot -->
+    <div id="chatbot" class="chatbot">
+        <div class="chatbot-header">
+            <i class="fas fa-robot"></i>
+            <span>AI Assistant</span>
+            <button id="chatbot-toggle" class="chatbot-toggle">
+                <i class="fas fa-minus"></i>
+            </button>
+        </div>
+        
+        <div class="chatbot-body">
+            <div id="chatbot-messages" class="chatbot-messages">
+                <div class="bot-message">
+                    <i class="fas fa-robot"></i>
+                    <div class="message-content">
+                        Hello! I'm your AI library assistant. I can help you search for books, get recommendations, or answer any library-related questions. How can I help you today?
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chatbot-input">
+                <input type="text" id="chatbot-input-field" placeholder="Ask me anything about books...">
+                <button id="chatbot-send">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
