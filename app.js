@@ -870,20 +870,40 @@ const Chatbot = {
         });
     },
     
-    sendMessage: () => {
+    sendMessage: async () => {
         const input = document.getElementById('chatbot-input-field');
         const message = input.value.trim();
-        
+
         if (!message) return;
-        
+
         Chatbot.addMessage(message, 'user');
         input.value = '';
-        
-        // Simulate AI response
-        setTimeout(() => {
-            const response = Chatbot.generateResponse(message);
+
+        // Show typing indicator
+        const typingMessage = document.createElement('div');
+        typingMessage.className = 'bot-message typing';
+        typingMessage.innerHTML = `
+            <i class="fas fa-robot"></i>
+            <div class="message-content">
+                <div class="typing-indicator">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        `;
+        document.getElementById('chatbot-messages').appendChild(typingMessage);
+
+        try {
+            const response = await Chatbot.generateResponse(message);
+            // Remove typing indicator
+            typingMessage.remove();
             Chatbot.addMessage(response, 'bot');
-        }, 1000);
+        } catch (error) {
+            // Remove typing indicator
+            typingMessage.remove();
+            Chatbot.addMessage('Sorry, I\'m having trouble responding right now. Please try again.', 'bot');
+        }
     },
     
     addMessage: (text, sender) => {
@@ -906,15 +926,37 @@ const Chatbot = {
         container.scrollTop = container.scrollHeight;
     },
     
-    generateResponse: (message) => {
-        const lowerMessage = message.toLowerCase();
-        
-        if (lowerMessage.includes('search') || lowerMessage.includes('find') || lowerMessage.includes('book')) {
-            return Utils.getRandomResponse('search');
-        } else if (lowerMessage.includes('recommend') || lowerMessage.includes('suggest')) {
-            return Utils.getRandomResponse('recommendation');
-        } else {
-            return Utils.getRandomResponse('help');
+    generateResponse: async (message) => {
+        try {
+            // Get current user context
+            const currentUser = Auth.getCurrentUser();
+            let context = '';
+
+            if (currentUser) {
+                context = `Current user: ${currentUser.name} (${currentUser.role}). `;
+                context += `Library has ${AppData.books.length} total books, ${AppData.books.filter(b => b.status === 'available').length} currently available. `;
+
+                if (currentUser.role === 'student' || currentUser.role === 'faculty') {
+                    const issuedBooks = Books.getIssuedBooks(currentUser.id);
+                    context += `User has ${issuedBooks.length} books issued. `;
+                }
+            }
+
+            // Call OpenAI API
+            const response = await window.OpenAIConfig.callOpenAI(message, context);
+            return response;
+        } catch (error) {
+            console.error('OpenAI API error:', error);
+            // Fallback to static responses if API fails
+            const lowerMessage = message.toLowerCase();
+
+            if (lowerMessage.includes('search') || lowerMessage.includes('find') || lowerMessage.includes('book')) {
+                return Utils.getRandomResponse('search');
+            } else if (lowerMessage.includes('recommend') || lowerMessage.includes('suggest')) {
+                return Utils.getRandomResponse('recommendation');
+            } else {
+                return Utils.getRandomResponse('help');
+            }
         }
     }
 };
@@ -984,10 +1026,27 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('genre-filter').addEventListener('change', BooksUI.searchBooks);
     
     // Upload form
-    document.getElementById('upload-form').addEventListener('submit', (e) => {
+    document.getElementById('upload-form').addEventListener('submit', async (e) => {
         e.preventDefault();
-        
+
         const formData = new FormData(e.target);
+        const pdfFile = document.getElementById('book-pdf').files[0];
+
+        let pdfUrl = null;
+        if (pdfFile) {
+            try {
+                // Upload PDF to Firebase Storage
+                const storageRef = window.FirebaseAuth.storage.ref();
+                const pdfRef = storageRef.child(`books/${Date.now()}_${pdfFile.name}`);
+                const uploadTask = await pdfRef.put(pdfFile);
+                pdfUrl = await uploadTask.ref.getDownloadURL();
+            } catch (error) {
+                console.error('Error uploading PDF:', error);
+                alert('Error uploading PDF. Please try again.');
+                return;
+            }
+        }
+
         const bookData = {
             title: formData.get('title') || document.getElementById('book-title').value,
             author: formData.get('author') || document.getElementById('book-author').value,
@@ -996,10 +1055,10 @@ document.addEventListener('DOMContentLoaded', () => {
             publication_year: parseInt(formData.get('year') || document.getElementById('book-year').value),
             description: formData.get('description') || document.getElementById('book-description').value,
             copies_total: parseInt(formData.get('copies') || document.getElementById('book-copies').value),
-            type: formData.get('pdf') || document.getElementById('book-pdf').files.length > 0 ? 'both' : 'physical',
-            pdf_url: formData.get('pdf') || document.getElementById('book-pdf').files.length > 0 ? '#' : null
+            type: pdfUrl ? 'both' : 'physical',
+            pdf_url: pdfUrl
         };
-        
+
         Books.add(bookData);
         alert('Book uploaded successfully!');
         e.target.reset();

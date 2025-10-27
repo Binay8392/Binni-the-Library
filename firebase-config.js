@@ -15,6 +15,9 @@ firebase.initializeApp(firebaseConfig);
 // Initialize Firebase Auth
 const auth = firebase.auth();
 
+// Initialize Firebase Storage
+const storage = firebase.storage();
+
 // Function to determine user role based on email
 function getUserRole(email) {
   const lowerEmail = email.toLowerCase();
@@ -29,4 +32,4 @@ function getUserRole(email) {
 }
 
 // Export for use in other files
-window.FirebaseAuth = { auth, getUserRole };
+window.FirebaseAuth = { auth, getUserRole, storage };
