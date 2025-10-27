@@ -1,0 +1,25 @@
+{
+  "name": "binni-the-librarian",
+  "version": "1.0.0",
+  "description": "Binni the Library - Smart Library Management System",
+  "main": "app.js",
+  "type": "module",
+  "scripts": {
+    "test": "node test-firestore.js",
+    "start": "python -m http.server 8000"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Binay8392/Binni-the-Library.git"
+  },
+  "keywords": ["library", "management", "firebase", "openai"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "firebase": "^9.22.0"
+  },
+  "bugs": {
+    "url": "https://github.com/Binay8392/Binni-the-Library/issues"
+  },
+  "homepage": "https://github.com/Binay8392/Binni-the-Library#readme"
+}
