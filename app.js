@@ -1141,6 +1141,15 @@ document.addEventListener('DOMContentLoaded', () => {
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding Book...';
 
+            // Ensure Firebase is initialized before proceeding
+            if (!window.FirebaseAuth || !window.FirebaseAuth.db) {
+                console.log('Firebase not initialized, initializing...');
+                const initSuccess = await window.initializeFirebase();
+                if (!initSuccess) {
+                    throw new Error('Failed to initialize Firebase. Please refresh the page and try again.');
+                }
+            }
+
             // Get and validate book data
             const bookTitle = document.getElementById('book-title').value.trim();
             const bookAuthor = document.getElementById('book-author').value.trim();
@@ -1268,11 +1277,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 is_drive_link: !!driveLink,
                 uploaded_by: Auth.getCurrentUser()?.email || 'unknown'
             };
-
-            // Verify database connection
-            if (!window.FirebaseAuth?.db) {
-                throw new Error('Database connection not available. Please refresh the page.');
-            }
 
             // Show saving indicator
             const savingMessage = document.createElement('div');
