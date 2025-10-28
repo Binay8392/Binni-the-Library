@@ -293,18 +293,37 @@
                             </div>
                             
                             <div class="form-group">
-                                <label class="form-label">Upload PDF File</label>
+                                <label class="form-label">Upload Method</label>
+                                <div class="upload-method-selector">
+                                    <div class="method-option">
+                                        <input type="radio" id="upload-file" name="upload-method" value="file" checked>
+                                        <label for="upload-file">
+                                            <i class="fas fa-upload"></i>
+                                            Upload PDF File
+                                        </label>
+                                        <small>Upload a PDF file directly to our storage</small>
+                                    </div>
+                                    <div class="method-option">
+                                        <input type="radio" id="upload-drive" name="upload-method" value="drive">
+                                        <label for="upload-drive">
+                                            <i class="fab fa-google-drive"></i>
+                                            Google Drive Link
+                                        </label>
+                                        <small>Use an existing Google Drive link</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group" id="file-upload-group">
+                                <label class="form-label">Select PDF File</label>
                                 <input type="file" class="form-control" id="book-pdf-file" accept=".pdf">
-                                <small class="form-text text-muted">Upload a PDF file directly (recommended)</small>
+                                <small class="form-text text-muted">Maximum file size: 50MB. Only PDF files are accepted.</small>
                             </div>
 
-                            <div class="form-group">
-                                <label class="form-label">Or Book Resource Link (Google Drive)</label>
+                            <div class="form-group" id="drive-link-group" style="display: none;">
+                                <label class="form-label">Google Drive Link</label>
                                 <input type="url" class="form-control" id="book-drive-link" placeholder="https://drive.google.com/file/d/..." pattern="https://drive\.google\.com/.*">
-                                <small class="form-text text-muted">Alternatively, paste the Google Drive sharing link for the book PDF/resource</small>
-                            </div>
-
-                            <div class="form-group">
+                                <small class="form-text text-muted">Paste the Google Drive sharing link for the book PDF/resource</small>
                                 <div class="checkbox-group">
                                     <input type="checkbox" id="is-public-link" checked>
                                     <label for="is-public-link">Link is accessible to anyone with the link</label>

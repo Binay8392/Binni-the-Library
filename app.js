@@ -1128,6 +1128,26 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     document.getElementById('genre-filter').addEventListener('change', BooksUI.searchBooks);
     
+    // Upload method selector
+    document.querySelectorAll('input[name="upload-method"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            const fileGroup = document.getElementById('file-upload-group');
+            const driveGroup = document.getElementById('drive-link-group');
+
+            if (e.target.value === 'file') {
+                fileGroup.style.display = 'block';
+                driveGroup.style.display = 'none';
+                document.getElementById('book-pdf-file').required = true;
+                document.getElementById('book-drive-link').required = false;
+            } else {
+                fileGroup.style.display = 'none';
+                driveGroup.style.display = 'block';
+                document.getElementById('book-pdf-file').required = false;
+                document.getElementById('book-drive-link').required = true;
+            }
+        });
+    });
+
     // Upload form
     document.getElementById('upload-form').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -1158,6 +1178,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const bookYear = document.getElementById('book-year').value;
             const bookDescription = document.getElementById('book-description').value.trim();
             const bookCopies = document.getElementById('book-copies').value;
+            const uploadMethod = document.querySelector('input[name="upload-method"]:checked').value;
             const pdfFile = document.getElementById('book-pdf-file').files[0];
             const driveLink = document.getElementById('book-drive-link').value.trim();
             const isPublicLink = document.getElementById('is-public-link').checked;
@@ -1171,13 +1192,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!bookDescription) throw new Error('Book description is required');
             if (!bookCopies) throw new Error('Number of copies is required');
 
-            // Validate that either PDF file or Drive link is provided
-            if (!pdfFile && !driveLink) {
-                throw new Error('Please upload a PDF file or provide a Google Drive link');
+            // Validate upload method specific requirements
+            if (uploadMethod === 'file' && !pdfFile) {
+                throw new Error('Please select a PDF file to upload');
             }
 
-            if (pdfFile && driveLink) {
-                throw new Error('Please choose either file upload or Drive link, not both');
+            if (uploadMethod === 'drive' && !driveLink) {
+                throw new Error('Please provide a Google Drive link');
             }
 
             let resourceUrl = null;
