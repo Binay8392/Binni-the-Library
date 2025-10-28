@@ -254,19 +254,44 @@ const Utils = {
 
 // Authentication Module
 const Auth = {
-    login: (email, password) => {
-        const user = AppData.users.find(u => u.email === email && u.password === password);
-        if (user) {
-            AppState.currentUser = user;
+    login: async (email, password) => {
+        try {
+            // Sign in with Firebase Auth
+            const userCredential = await window.FirebaseAuth.auth.signInWithEmailAndPassword(email, password);
+            const user = userCredential.user;
+
+            // Get user role based on email
+            const role = window.FirebaseAuth.getUserRole(email);
+            
+            // Set up AppState user object
+            AppState.currentUser = {
+                id: user.uid,
+                name: user.displayName || email.split('@')[0],
+                email: email,
+                role: role,
+                registration_date: new Date(user.metadata.creationTime).toISOString().split('T')[0],
+                books_issued: [],
+                reading_history: [],
+                preferences: []
+            };
+
             return true;
+        } catch (error) {
+            console.error('Login error:', error);
+            UI.showError('login-error', error.message);
+            return false;
         }
-        return false;
     },
     
-    logout: () => {
-        AppState.currentUser = null;
-        UI.showPage('landing-page');
-        UI.resetDashboard();
+    logout: async () => {
+        try {
+            await window.FirebaseAuth.auth.signOut();
+            AppState.currentUser = null;
+            UI.showPage('landing-page');
+            UI.resetDashboard();
+        } catch (error) {
+            console.error('Logout error:', error);
+        }
     },
     
     getCurrentUser: () => AppState.currentUser,
@@ -407,18 +432,59 @@ const Books = {
             .slice(0, 3);
     },
     
-    add: (bookData) => {
-        const newBook = {
-            id: Utils.generateId(),
-            ...bookData,
-            status: 'available',
-            copies_available: parseInt(bookData.copies_total) || 0,
-            rating: 0,
-            cover_image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=200&h=300&fit=crop"
-        };
-        
-        AppData.books.push(newBook);
-        return newBook;
+    add: async (bookData) => {
+        try {
+            if (!window.FirebaseAuth.db) {
+                throw new Error('Database not initialized. Please refresh the page.');
+            }
+
+            // Create timestamp for tracking
+            const timestamp = firebase.firestore.FieldValue.serverTimestamp();
+
+            // Create the new book object with provided data
+            const newBook = {
+                ...bookData,
+                status: 'available',
+                copies_available: parseInt(bookData.copies_total) || 0,
+                rating: 0,
+                cover_image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=200&h=300&fit=crop",
+                created_at: timestamp,
+                updated_at: timestamp
+            };
+            
+            // Save to Firestore with retry logic
+            let attempts = 0;
+            const maxAttempts = 3;
+            
+            while (attempts < maxAttempts) {
+                try {
+                    console.log('Attempting to save book to Firestore:', newBook);
+                    const bookDocRef = await window.FirebaseAuth.db.collection('books').add(newBook);
+                    console.log('Book saved successfully with ID:', bookDocRef.id);
+                    
+                    // Add the ID to the book object
+                    newBook.id = bookDocRef.id;
+                    
+                    // Update local state
+                    AppData.books.push(newBook);
+                    
+                    return newBook;
+                } catch (firestoreError) {
+                    attempts++;
+                    console.error(`Firestore error (attempt ${attempts}/${maxAttempts}):`, firestoreError);
+                    
+                    if (attempts === maxAttempts) {
+                        throw new Error('Failed to save book after multiple attempts. Please check your connection and try again.');
+                    }
+                    
+                    // Wait before retrying (exponential backoff)
+                    await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempts) * 1000));
+                }
+            }
+        } catch (error) {
+            console.error('Error in Books.add:', error);
+            throw error;
+        }
     },
     
     requestIssue: (userId, bookId) => {
@@ -488,7 +554,7 @@ const Dashboard = {
                     <p class="item-subtitle">by ${book.author}</p>
                 </div>
                 <div class="item-actions">
-                    ${book.pdf_url ? `<button class="btn btn--sm btn--primary" onclick="Books.viewPDF('${book.id}')">View PDF</button>` : ''}
+                    ${book.pdf_url ? `<button class="btn btn--sm btn--primary" onclick="BooksUI.viewPDF('${book.id}')">View PDF</button>` : ''}
                 </div>
             </div>
         `).join('');
@@ -551,10 +617,47 @@ const BooksUI = {
     
     viewPDF: (bookId) => {
         const book = Books.getById(bookId);
-        if (book && book.pdf_url) {
-            document.getElementById('pdf-title').textContent = book.title;
-            UI.showModal('pdf-modal');
+        if (!book || !book.pdf_url || book.pdf_url === '#') {
+            alert('PDF is not available for this book.');
+            return;
         }
+
+        document.getElementById('pdf-title').textContent = book.title;
+        const viewerContainer = document.querySelector('.pdf-viewer');
+        viewerContainer.innerHTML = ''; // Clear placeholder
+
+        if (book.is_drive_link && book.drive_link) {
+            // For Google Drive links, create a viewer with options
+            const viewer = document.createElement('div');
+            viewer.innerHTML = `
+                <div class="drive-viewer">
+                    <iframe src="${book.pdf_url}&embedded=true" 
+                            width="100%" 
+                            height="600px" 
+                            frameborder="0"
+                            allowfullscreen>
+                    </iframe>
+                    <div class="drive-actions">
+                        <a href="${book.drive_link}" 
+                            target="_blank" 
+                            class="btn btn--secondary">
+                            <i class="fas fa-external-link-alt"></i> Open in Drive
+                        </a>
+                    </div>
+                </div>
+            `;
+            viewerContainer.appendChild(viewer);
+        } else {
+            // For direct PDF files
+            const viewer = document.createElement('iframe');
+            viewer.src = book.pdf_url;
+            viewer.style.width = '100%';
+            viewer.style.height = '600px';
+            viewer.style.border = 'none';
+            viewerContainer.appendChild(viewer);
+        }
+        
+        UI.showModal('pdf-modal');
     },
     
     requestBook: (bookId) => {
@@ -1029,40 +1132,212 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('upload-form').addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        const formData = new FormData(e.target);
-        const pdfFile = document.getElementById('book-pdf').files[0];
+        const form = e.target;
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalBtnText = submitBtn.innerHTML;
 
-        let pdfUrl = null;
-        if (pdfFile) {
-            try {
-                // Upload PDF to Firebase Storage
-                const storageRef = window.FirebaseAuth.storage.ref();
-                const pdfRef = storageRef.child(`books/${Date.now()}_${pdfFile.name}`);
-                const uploadTask = await pdfRef.put(pdfFile);
-                pdfUrl = await uploadTask.ref.getDownloadURL();
-            } catch (error) {
-                console.error('Error uploading PDF:', error);
-                alert('Error uploading PDF. Please try again.');
-                return;
+        try {
+            // Disable submit button and show loading state
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding Book...';
+
+            // Get and validate book data
+            const bookTitle = document.getElementById('book-title').value.trim();
+            const bookAuthor = document.getElementById('book-author').value.trim();
+            const bookIsbn = document.getElementById('book-isbn').value.trim();
+            const bookGenre = document.getElementById('book-genre').value;
+            const bookYear = document.getElementById('book-year').value;
+            const bookDescription = document.getElementById('book-description').value.trim();
+            const bookCopies = document.getElementById('book-copies').value;
+            const pdfFile = document.getElementById('book-pdf-file').files[0];
+            const driveLink = document.getElementById('book-drive-link').value.trim();
+            const isPublicLink = document.getElementById('is-public-link').checked;
+
+            // Validate required fields
+            if (!bookTitle) throw new Error('Book title is required');
+            if (!bookAuthor) throw new Error('Author name is required');
+            if (!bookIsbn) throw new Error('ISBN is required');
+            if (!bookGenre) throw new Error('Genre is required');
+            if (!bookYear) throw new Error('Publication year is required');
+            if (!bookDescription) throw new Error('Book description is required');
+            if (!bookCopies) throw new Error('Number of copies is required');
+
+            // Validate that either PDF file or Drive link is provided
+            if (!pdfFile && !driveLink) {
+                throw new Error('Please upload a PDF file or provide a Google Drive link');
             }
+
+            if (pdfFile && driveLink) {
+                throw new Error('Please choose either file upload or Drive link, not both');
+            }
+
+            let resourceUrl = null;
+            let storagePath = null;
+
+            if (pdfFile) {
+                // Validate PDF file
+                if (pdfFile.type !== 'application/pdf') {
+                    throw new Error('Please select a valid PDF file');
+                }
+
+                if (pdfFile.size > 50 * 1024 * 1024) { // 50MB limit
+                    throw new Error('PDF file size must be less than 50MB');
+                }
+
+                // Show upload progress
+                const progressMessage = document.createElement('div');
+                progressMessage.className = 'upload-progress';
+                progressMessage.innerHTML = `
+                    <div style="background: #cce5ff; color: #004085; padding: 12px; border-radius: 4px; margin: 10px;">
+                        <strong>📤 Uploading PDF:</strong> <span id="upload-progress">0%</span>
+                    </div>
+                `;
+                form.appendChild(progressMessage);
+
+                try {
+                    // Upload to Firebase Storage
+                    const fileName = `${Date.now()}_${pdfFile.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+                    storagePath = `books/${fileName}`;
+
+                    const storageRef = window.FirebaseAuth.storage.ref(storagePath);
+                    const uploadTask = storageRef.put(pdfFile);
+
+                    // Monitor upload progress
+                    uploadTask.on('state_changed',
+                        (snapshot) => {
+                            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                            document.getElementById('upload-progress').textContent = `${Math.round(progress)}%`;
+                        },
+                        (error) => {
+                            console.error('Upload error:', error);
+                            throw new Error('Failed to upload PDF file');
+                        }
+                    );
+
+                    // Wait for upload to complete
+                    const snapshot = await uploadTask;
+                    resourceUrl = await snapshot.ref.getDownloadURL();
+
+                    console.log('PDF uploaded successfully:', resourceUrl);
+                    progressMessage.remove();
+
+                } catch (uploadError) {
+                    console.error('PDF upload error:', uploadError);
+                    if (progressMessage) progressMessage.remove();
+                    throw new Error('Failed to upload PDF file. Please try again.');
+                }
+
+            } else if (driveLink) {
+                // Handle Google Drive link (existing logic)
+                if (!driveLink.match(/^https:\/\/drive\.google\.com\/.*/i)) {
+                    throw new Error('Please enter a valid Google Drive link');
+                }
+
+                if (!isPublicLink) {
+                    throw new Error('Please ensure the Google Drive link is set to "Anyone with the link can view"');
+                }
+
+                // Extract file ID
+                let fileId = '';
+                if (driveLink.includes('/file/d/')) {
+                    fileId = driveLink.split('/file/d/')[1].split('/')[0];
+                } else if (driveLink.includes('id=')) {
+                    fileId = driveLink.split('id=')[1].split('&')[0];
+                }
+
+                if (!fileId) {
+                    throw new Error('Could not parse Google Drive file ID. Please check the link format.');
+                }
+
+                resourceUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+            }
+
+            // Create book data object
+            const bookData = {
+                title: bookTitle,
+                author: bookAuthor,
+                isbn: bookIsbn,
+                genre: bookGenre,
+                publication_year: parseInt(bookYear),
+                description: bookDescription,
+                copies_total: parseInt(bookCopies),
+                type: resourceUrl ? 'both' : 'physical',
+                pdf_url: resourceUrl,
+                drive_link: driveLink || null,
+                storage_path: storagePath,
+                is_drive_link: !!driveLink,
+                uploaded_by: Auth.getCurrentUser()?.email || 'unknown'
+            };
+
+            // Verify database connection
+            if (!window.FirebaseAuth?.db) {
+                throw new Error('Database connection not available. Please refresh the page.');
+            }
+
+            // Show saving indicator
+            const savingMessage = document.createElement('div');
+            savingMessage.className = 'saving-message';
+            savingMessage.textContent = 'Saving book to database...';
+            form.appendChild(savingMessage);
+
+            try {
+                // Initialize FirestoreService if needed
+                if (!window.FirestoreService) {
+                    throw new Error('Firebase services not initialized. Please refresh the page.');
+                }
+
+                // First attempt to add to Firestore
+                const bookId = await window.FirestoreService.addBook(bookData);
+
+                if (!bookId) {
+                    throw new Error('Failed to get book ID after saving.');
+                }
+
+                // Update local state after successful save
+                bookData.id = bookId;
+                AppData.books.push(bookData);
+
+                // Reset form and update UI
+                form.reset();
+                Dashboard.updateStats();
+
+                // Show success feedback
+                const successMessage = document.createElement('div');
+                successMessage.className = 'success-message';
+                successMessage.innerHTML = `
+                    <div style="background: #d4edda; color: #155724; padding: 12px; border-radius: 4px; margin: 10px;">
+                        <strong>✓ Success!</strong> Book added successfully with PDF.
+                    </div>
+                `;
+                form.insertBefore(successMessage, form.firstChild);
+
+                // Remove success message after 5 seconds
+                setTimeout(() => successMessage.remove(), 5000);
+            } catch (dbError) {
+                console.error('Database error:', dbError);
+                throw new Error(dbError.message || 'Failed to save book. Please check your connection and try again.');
+            } finally {
+                // Remove saving message
+                savingMessage.remove();
+            }
+        } catch (error) {
+            console.error('Error adding book:', error);
+            const errorMessage = error.message || 'Error adding book. Please try again.';
+            alert(errorMessage);
+
+            // Show error in form
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.textContent = errorMessage;
+            form.insertBefore(errorDiv, form.firstChild);
+
+            // Remove error message after 5 seconds
+            setTimeout(() => errorDiv.remove(), 5000);
+        } finally {
+            // Reset button state
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalBtnText;
         }
-
-        const bookData = {
-            title: formData.get('title') || document.getElementById('book-title').value,
-            author: formData.get('author') || document.getElementById('book-author').value,
-            isbn: formData.get('isbn') || document.getElementById('book-isbn').value,
-            genre: formData.get('genre') || document.getElementById('book-genre').value,
-            publication_year: parseInt(formData.get('year') || document.getElementById('book-year').value),
-            description: formData.get('description') || document.getElementById('book-description').value,
-            copies_total: parseInt(formData.get('copies') || document.getElementById('book-copies').value),
-            type: pdfUrl ? 'both' : 'physical',
-            pdf_url: pdfUrl
-        };
-
-        Books.add(bookData);
-        alert('Book uploaded successfully!');
-        e.target.reset();
-        Dashboard.updateStats();
     });
     
     // Tab switching

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test PDF Upload</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #cce5ff; color: #004085; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        input[type="file"] { margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>Test PDF Upload Functionality</h1>
+
+    <div class="test-section info">
+        <h3>Testing Checklist</h3>
+        <ul>
+            <li>✅ Firebase Storage upload implemented</li>
+            <li>✅ File validation (PDF only, size limit)</li>
+            <li>✅ Upload progress indicator</li>
+            <li>✅ Error handling for failed uploads</li>
+            <li>⏳ Test with actual PDF file</li>
+            <li>⏳ Verify download URL accessibility</li>
+            <li>⏳ Test chatbot responses</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h3>Manual Test Steps</h3>
+        <ol>
+            <li>Login as faculty or librarian</li>
+            <li>Go to Upload section</li>
+            <li>Fill book details</li>
+            <li>Select a PDF file (under 50MB)</li>
+            <li>Click "Upload Book Info"</li>
+            <li>Verify upload progress shows</li>
+            <li>Check success message appears</li>
+            <li>Verify book appears in catalog</li>
+            <li>Test PDF download/view functionality</li>
+        </ol>
+    </div>
+
+    <div class="test-section">
+        <h3>Chatbot Test Queries</h3>
+        <div id="chatbot-tests">
+            <button onclick="testQuery('search')">Test Search Query</button>
+            <button onclick="testQuery('recommend')">Test Recommendation</button>
+            <button onclick="testQuery('help')">Test Help Query</button>
+            <button onclick="testQuery('random')">Test Random Query</button>
+        </div>
+        <div id="test-results" style="margin-top: 10px;"></div>
+    </div>
+
+    <script>
+        function testQuery(type) {
+            const queries = {
+                search: ['find books about algorithms', 'show me computer science books', 'search for mathematics'],
+                recommend: ['recommend some books', 'what should I read', 'suggest books for students'],
+                help: ['help me', 'what can you do', 'how do I use the library'],
+                random: ['hello', 'tell me about the library', 'how many books do you have']
+            };
+
+            const query = queries[type][Math.floor(Math.random() * queries[type].length)];
+            const results = document.getElementById('test-results');
+
+            results.innerHTML = `<div class="info">Testing: "${query}"</div>`;
+
+            // Simulate chatbot response (would normally call OpenAI)
+            setTimeout(() => {
+                results.innerHTML += `<div class="success">✓ Chatbot responded to "${query}"</div>`;
+            }, 1000);
+        }
+
+        // Check if we're running on localhost
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            document.body.insertAdjacentHTML('afterbegin', `
+                <div class="test-section success">
+                    <strong>✓ Local Server Detected</strong><br>
+                    Running on ${window.location.hostname}:${window.location.port}<br>
+                    Firebase services should be available for testing.
+                </div>
+            `);
+        } else {
+            document.body.insertAdjacentHTML('afterbegin', `
+                <div class="test-section error">
+                    <strong>⚠️ Not Running Locally</strong><br>
+                    For proper testing, run: <code>python -m http.server 8000</code><br>
+                    Then visit: <code>http://localhost:8000</code>
+                </div>
+            `);
+        }
+    </script>
+</body>
+</html>

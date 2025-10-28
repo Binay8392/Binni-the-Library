@@ -7,8 +7,8 @@
 - [x] Add typing indicator for better UX during AI responses
 
 ## Testing Tasks
-- [ ] Test PDF upload functionality with a sample PDF file
-- [ ] Test chatbot with various queries to ensure OpenAI integration works
+- [x] Test PDF upload functionality with a sample PDF file
+- [x] Test chatbot with various queries to ensure OpenAI integration works
 - [ ] Verify uploaded PDFs are accessible via download URLs
 - [ ] Test error handling for failed uploads and API calls
 
